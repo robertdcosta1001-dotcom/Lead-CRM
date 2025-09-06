@@ -1,8 +1,6 @@
 "use client"
 
 import type React from "react"
-import type { SpeechRecognition } from "webkit-speech-recognition"
-
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Mic, MicOff } from "lucide-react"
+import type SpeechRecognition from "speech-recognition"
 
 interface Lead {
   id: string
@@ -36,6 +35,21 @@ interface LeadFormProps {
   onSuccess: () => void
   onCancel: () => void
   currentUserId: string
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition
+    webkitSpeechRecognition: typeof SpeechRecognition
+  }
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string
 }
 
 export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormProps) {
@@ -68,14 +82,14 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
   useEffect(() => {
     loadSalesReps()
 
-    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+    if (typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
       recognitionRef.current = new SpeechRecognition()
       recognitionRef.current.continuous = false
       recognitionRef.current.interimResults = false
       recognitionRef.current.lang = "en-US"
 
-      recognitionRef.current.onresult = (event) => {
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript
         if (activeField) {
           handleInputChange(activeField, transcript)
@@ -84,7 +98,8 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
         setActiveField(null)
       }
 
-      recognitionRef.current.onerror = () => {
+      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error("Speech recognition error:", event.error)
         setIsListening(false)
         setActiveField(null)
       }
@@ -192,7 +207,7 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
   const SpeechInput = ({ fieldName, children }: { fieldName: string; children: React.ReactNode }) => (
     <div className="relative">
       {children}
-      {("webkitSpeechRecognition" in window || "SpeechRecognition" in window) && (
+      {typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) && (
         <Button
           type="button"
           size="sm"
@@ -422,7 +437,7 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
             placeholder="Additional notes about this lead..."
             rows={3}
           />
-          {("webkitSpeechRecognition" in window || "SpeechRecognition" in window) && (
+          {typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) && (
             <Button
               type="button"
               size="sm"
