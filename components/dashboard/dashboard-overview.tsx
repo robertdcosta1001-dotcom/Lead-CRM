@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, Calendar, BarChart3, UserCheck, Target, DollarSign } from "lucide-react"
+import { Users, Calendar, BarChart3, UserCheck, Target, DollarSign, Plus } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
 
 interface Profile {
@@ -131,6 +131,13 @@ export function DashboardOverview({ profile }: { profile: Profile }) {
           <p className="text-gray-600 mt-1">{roleContent.subtitle}</p>
         </div>
         <div className="flex items-center space-x-4">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => (window.location.href = "/dashboard/leads/new")}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Lead
+          </Button>
           <Button className="bg-emerald-600 hover:bg-emerald-700">
             <Calendar className="w-4 h-4 mr-2" />
             Schedule Meeting
@@ -277,11 +284,17 @@ export function DashboardOverview({ profile }: { profile: Profile }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Button className="w-full justify-start bg-transparent" variant="outline">
-                <Users className="w-4 h-4 mr-2" />
-                Add New Employee
-              </Button>
-              <Button className="w-full justify-start bg-transparent" variant="outline">
+              {(profile.role === "admin" || profile.role === "manager") && (
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <Users className="w-4 h-4 mr-2" />
+                  Add New Employee
+                </Button>
+              )}
+              <Button
+                className="w-full justify-start bg-transparent"
+                variant="outline"
+                onClick={() => (window.location.href = "/dashboard/leads/new")}
+              >
                 <Target className="w-4 h-4 mr-2" />
                 Create New Lead
               </Button>

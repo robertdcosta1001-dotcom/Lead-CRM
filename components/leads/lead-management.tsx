@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client"
 import { format } from "date-fns"
 import { LeadForm } from "./lead-form"
 import { LeadDetails } from "./lead-details"
+import { LeadExport } from "./lead-export"
 
 interface Profile {
   id: string
@@ -206,29 +207,33 @@ export function LeadManagement({ profile }: { profile: Profile }) {
           </p>
         </div>
 
-        {canManageLeads && (
-          <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Lead
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add New Lead</DialogTitle>
-              </DialogHeader>
-              <LeadForm
-                onSuccess={() => {
-                  setShowAddLead(false)
-                  loadLeads()
-                }}
-                onCancel={() => setShowAddLead(false)}
-                currentUserId={profile.id}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <div className="flex items-center space-x-3">
+          <LeadExport userRole={profile.role} />
+
+          {canManageLeads && (
+            <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Lead
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Lead</DialogTitle>
+                </DialogHeader>
+                <LeadForm
+                  onSuccess={() => {
+                    setShowAddLead(false)
+                    loadLeads()
+                  }}
+                  onCancel={() => setShowAddLead(false)}
+                  currentUserId={profile.id}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}

@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
+import type { SpeechRecognition } from "webkit-speech-recognition"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
+import { Loader2, Mic, MicOff } from "lucide-react"
 
 interface Lead {
   id: string
@@ -60,8 +61,39 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
+  const [isListening, setIsListening] = useState(false)
+  const [activeField, setActiveField] = useState<string | null>(null)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
+
   useEffect(() => {
     loadSalesReps()
+
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = false
+      recognitionRef.current.interimResults = false
+      recognitionRef.current.lang = "en-US"
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript
+        if (activeField) {
+          handleInputChange(activeField, transcript)
+        }
+        setIsListening(false)
+        setActiveField(null)
+      }
+
+      recognitionRef.current.onerror = () => {
+        setIsListening(false)
+        setActiveField(null)
+      }
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false)
+        setActiveField(null)
+      }
+    }
   }, [])
 
   const loadSalesReps = async () => {
@@ -157,6 +189,41 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
     "Other",
   ]
 
+  const SpeechInput = ({ fieldName, children }: { fieldName: string; children: React.ReactNode }) => (
+    <div className="relative">
+      {children}
+      {("webkitSpeechRecognition" in window || "SpeechRecognition" in window) && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className={`absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 ${
+            isListening && activeField === fieldName ? "text-red-500" : "text-gray-400"
+          }`}
+          onClick={() => (isListening && activeField === fieldName ? stopListening() : startListening(fieldName))}
+        >
+          {isListening && activeField === fieldName ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </Button>
+      )}
+    </div>
+  )
+
+  const startListening = (fieldName: string) => {
+    if (recognitionRef.current && !isListening) {
+      setActiveField(fieldName)
+      setIsListening(true)
+      recognitionRef.current.start()
+    }
+  }
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+      setActiveField(null)
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -168,45 +235,55 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="company_name">Company Name *</Label>
-          <Input
-            id="company_name"
-            value={formData.company_name}
-            onChange={(e) => handleInputChange("company_name", e.target.value)}
-            required
-          />
+          <SpeechInput fieldName="company_name">
+            <Input
+              id="company_name"
+              value={formData.company_name}
+              onChange={(e) => handleInputChange("company_name", e.target.value)}
+              required
+            />
+          </SpeechInput>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="contact_name">Contact Name *</Label>
-          <Input
-            id="contact_name"
-            value={formData.contact_name}
-            onChange={(e) => handleInputChange("contact_name", e.target.value)}
-            required
-          />
+          <SpeechInput fieldName="contact_name">
+            <Input
+              id="contact_name"
+              value={formData.contact_name}
+              onChange={(e) => handleInputChange("contact_name", e.target.value)}
+              required
+            />
+          </SpeechInput>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange("email", e.target.value)}
-          />
+          <SpeechInput fieldName="email">
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+            />
+          </SpeechInput>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
+          <SpeechInput fieldName="phone">
+            <Input id="phone" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
+          </SpeechInput>
         </div>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="address">Address</Label>
-        <Input id="address" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
+        <SpeechInput fieldName="address">
+          <Input id="address" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
+        </SpeechInput>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -337,13 +414,28 @@ export function LeadForm({ lead, onSuccess, onCancel, currentUserId }: LeadFormP
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          value={formData.notes}
-          onChange={(e) => handleInputChange("notes", e.target.value)}
-          placeholder="Additional notes about this lead..."
-          rows={3}
-        />
+        <div className="relative">
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => handleInputChange("notes", e.target.value)}
+            placeholder="Additional notes about this lead..."
+            rows={3}
+          />
+          {("webkitSpeechRecognition" in window || "SpeechRecognition" in window) && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={`absolute right-2 top-2 h-6 w-6 p-0 ${
+                isListening && activeField === "notes" ? "text-red-500" : "text-gray-400"
+              }`}
+              onClick={() => (isListening && activeField === "notes" ? stopListening() : startListening("notes"))}
+            >
+              {isListening && activeField === "notes" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">
